@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Batch scoring · Autoencoder Anomaly Lab{% endblock %}
+{% block breadcrumb %}BATCH SCORING{% endblock %}
+{% block content %}
+<section class="page-heading"><div class="eyebrow">INFERENCE / CSV BATCH</div><h1>Batch scoring</h1><p class="hero-copy">Score a CSV containing the required feature columns, review the highest-error rows, and download the full results.</p></section>
+{% if not bundle %}
+<section class="panel empty-state"><div class="empty-icon">⇧</div><h2>Model required</h2><p class="muted">Train a model before uploading a batch. The model's required feature names will be shown here once available.</p><a class="button button-primary" href="{{ url_for('dashboard') }}">Go to model dashboard <span>→</span></a></section>
+{% else %}
+<section class="panel upload-panel"><div class="panel-heading"><div><div class="eyebrow">CSV INPUT</div><h2>Upload transaction records</h2></div><span class="panel-index">{{ bundle.feature_columns|length }} REQUIRED FEATURES</span></div>
+  <p class="muted">All required model features must be present and numeric. Extra columns are retained in the exported file.</p>
+  <div class="required-features">{% for column in bundle.feature_columns %}<span class="feature-chip">{{ column }}</span>{% endfor %}</div>
+  <form method="post" enctype="multipart/form-data" class="upload-form" data-busy-text="Scoring CSV…"><label class="drop-zone" for="batch_file"><span class="upload-symbol">⇧</span><strong>Select a CSV file</strong><small>CSV format · up to 300 MB</small><input id="batch_file" name="batch_file" type="file" accept=".csv,text/csv" required></label><button class="button button-primary" type="submit">Score uploaded CSV <span>→</span></button><div class="busy-indicator" hidden><span class="spinner"></span> Scoring rows. Keep this tab open.</div></form>
+</section>
+{% endif %}
+{% if result %}
+<section class="section-block"><div class="section-heading"><div><div class="eyebrow">RESULTS / {{ result.filename }}</div><h2>Scoring summary</h2></div><a class="button button-primary" href="{{ url_for('download_batch', filename=result.download_name) }}">Download scored CSV <span>↓</span></a></div>
+  <div class="metric-grid three"><article class="metric-card"><span class="metric-label">ROWS SCORED</span><strong>{{ fmt_int(result.rows) }}</strong></article><article class="metric-card"><span class="metric-label">POTENTIAL ANOMALIES</span><strong>{{ fmt_int(result.flagged) }}</strong></article><article class="metric-card"><span class="metric-label">ANOMALY RATE</span><strong>{{ '%.2f%%'|format(result.rate * 100) }}</strong></article></div>
+  <section class="panel table-panel"><div class="panel-heading"><div><div class="eyebrow">TOP 100</div><h2>Highest reconstruction errors</h2></div><span class="panel-index">SORTED DESCENDING</span></div><div class="table-scroll"><table><thead><tr>{% for column in result.columns %}<th>{{ column }}</th>{% endfor %}</tr></thead><tbody>{% for row in result.preview %}<tr>{% for column in result.columns %}<td>{% if column == 'prediction' %}<span class="result-pill {% if row[column] == 'Anomaly' %}danger{% else %}normal{% endif %}">{{ row[column] }}</span>{% elif row[column] is none %}—{% elif row[column] is number %}{{ '%.6g'|format(row[column]) }}{% else %}{{ row[column] }}{% endif %}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div></section>
+</section>
+{% endif %}
+{% endblock %}

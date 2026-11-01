@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Model dashboard · Autoencoder Anomaly Lab{% endblock %}
+{% block breadcrumb %}MODEL DASHBOARD{% endblock %}
+{% block content %}
+<section class="hero-row">
+  <div>
+    <div class="eyebrow">UNSUPERVISED LEARNING / TRANSACTION MONITORING</div>
+    <h1>Autoencoder Anomaly Lab</h1>
+    <p class="hero-copy">Train a reconstruction-based detector, review model behaviour, and score individual transactions or an entire CSV batch.</p>
+    <div class="tag-row"><span class="tag">PYTORCH</span><span class="tag">RECONSTRUCTION ERROR</span><span class="tag">LOCAL DATA PROCESSING</span></div>
+  </div>
+  <div class="hero-status"><span class="status-pulse"></span><div><strong>{% if model_available %}Model ready{% else %}Awaiting training{% endif %}</strong><small>{% if model_available %}Inference endpoints are available{% else %}Configure and train your first model{% endif %}</small></div></div>
+</section>
+
+<section class="metric-grid four">
+  <article class="metric-card"><span class="metric-label">SOURCE ROWS</span><strong>{{ fmt_int(source_rows) }}</strong><small>{{ source_name }}</small></article>
+  <article class="metric-card"><span class="metric-label">NUMERIC FEATURES</span><strong>{{ fmt_int(feature_count) }}</strong><small>Used as model inputs</small></article>
+  <article class="metric-card"><span class="metric-label">LABEL COLUMN</span><strong class="metric-text">{{ label_column }}</strong><small>0 = normal · 1 = anomaly</small></article>
+  <article class="metric-card"><span class="metric-label">MODEL STATUS</span><strong class="metric-text">{% if model_available %}Available{% else %}Not trained{% endif %}</strong><small>{{ artifacts|length }} artifact file(s) found</small></article>
+</section>
+
+<div class="main-grid dashboard-grid">
+  <section class="panel training-panel">
+    <div class="panel-heading"><div><div class="eyebrow">01 / MODEL WORKSPACE</div><h2>Train the detector</h2></div><span class="panel-index">TRAINING</span></div>
+    <p class="muted">The autoencoder learns normal patterns and uses reconstruction error to flag unfamiliar transactions. When a binary label column is present, only rows labelled 0 are used for training.</p>
+    <form class="stack-form" method="post" action="{{ url_for('train') }}" enctype="multipart/form-data" data-busy-text="Training model…">
+      <label class="field-label" for="dataset_file">Dataset CSV <span class="optional">optional</span></label>
+      <input id="dataset_file" name="dataset_file" type="file" accept=".csv,text/csv" class="file-input">
+      <p class="field-help">Leave empty to use the current dataset: {{ source_name }}. Uploads must contain numeric feature columns.</p>
+      <div class="form-grid two">
+        <div class="field"><label for="max_rows">Rows to use</label><select id="max_rows" name="max_rows"><option value="20000" selected>20,000 rows</option><option value="50000">50,000 rows</option><option value="100000">100,000 rows</option><option value="250000">250,000 rows</option><option value="all">Full dataset</option></select></div>
+        <div class="field"><label for="epochs">Maximum epochs</label><select id="epochs" name="epochs">{% for n in [5,10,15,20,25,30,40,50,60,70,80] %}<option value="{{ n }}" {% if n == 20 %}selected{% endif %}>{{ n }} epochs</option>{% endfor %}</select></div>
+        <div class="field"><label for="batch_size">Batch size</label><select id="batch_size" name="batch_size">{% for n in [32,64,128,256,512,1024] %}<option value="{{ n }}" {% if n == 256 %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="learning_rate">Learning rate</label><select id="learning_rate" name="learning_rate"><option value="0.0001">0.0001</option><option value="0.0003">0.0003</option><option value="0.001" selected>0.001</option><option value="0.003">0.003</option></select></div>
+        <div class="field"><label for="latent_dim">Latent dimension</label><select id="latent_dim" name="latent_dim">{% for n in [2,4,8,16,32] %}<option value="{{ n }}" {% if n == 8 %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="patience">Early-stopping patience</label><select id="patience" name="patience">{% for n in range(3,16) %}<option value="{{ n }}" {% if n == 5 %}selected{% endif %}>{{ n }} epochs</option>{% endfor %}</select></div>
+      </div>
+      <div class="field"><label for="threshold_method">Anomaly threshold method</label><select id="threshold_method" name="threshold_method"><option value="percentile" selected>Training error percentile</option><option value="mean_std">Mean + standard deviations</option></select></div>
+      <div class="field"><label for="threshold_setting" id="threshold-setting-label">Percentile (90–99.9)</label><input id="threshold_setting" name="threshold_setting" type="number" min="90" max="99.9" step="0.1" value="99.0" required><small class="field-help" id="threshold-setting-help">Higher percentiles generally create a more conservative threshold.</small></div>
+      <button class="button button-primary button-wide" type="submit"><span>Train / retrain model</span><span aria-hidden="true">→</span></button>
+      <div class="busy-indicator" hidden><span class="spinner"></span> Training is running. Keep this tab open until it finishes.</div>
+    </form>
+  </section>
+
+  <div class="right-stack">
+    <section class="panel">
+      <div class="panel-heading"><div><div class="eyebrow">02 / PERSISTENCE</div><h2>Saved artifacts</h2></div><span class="icon-chip">▣</span></div>
+      <div class="artifact-count"><strong>{{ artifacts|length }}<small> / 6</small></strong><span>expected files found</span></div>
+      {% if artifacts %}<ul class="artifact-list">{% for name in artifacts %}<li><span class="file-bullet">▤</span><code>{{ name }}</code><span class="checkmark">✓</span></li>{% endfor %}</ul>{% else %}<p class="muted compact">Model weights, scaler, metadata, metrics and plots will be saved under <code>artifacts/</code>.</p>{% endif %}
+    </section>
+    <section class="panel source-panel">
+      <div class="panel-heading"><div><div class="eyebrow">03 / DATA QUALITY</div><h2>Source checks</h2></div><span class="icon-chip">⌕</span></div>
+      <div class="mini-stat-row"><div><span>Missing cells</span><strong>{{ fmt_int(missing_count) }}</strong></div><div><span>Duplicate rows</span><strong>{{ fmt_int(duplicate_count) }}</strong></div></div>
+      <a class="text-link" href="{{ url_for('dataset_explorer') }}">Open dataset explorer <span>↗</span></a>
+    </section>
+  </div>
+</div>
+
+{% if metrics or threshold is not none %}
+<section class="section-block">
+  <div class="section-heading"><div><div class="eyebrow">LATEST RUN</div><h2>Model results</h2></div>{% if threshold is not none %}<div class="threshold-pill">Threshold <strong>{{ '%.6g'|format(threshold) }}</strong></div>{% endif %}</div>
+  <div class="metric-grid four results-metrics">
+    <article class="metric-card"><span class="metric-label">TRAIN ROWS</span><strong>{{ fmt_int(train_samples) }}</strong><small>Normal training rows</small></article>
+    <article class="metric-card"><span class="metric-label">TEST ROWS</span><strong>{{ fmt_int(test_samples) }}</strong><small>Held-out evaluation</small></article>
+    <article class="metric-card"><span class="metric-label">FLAGGED ANOMALIES</span><strong>{{ fmt_int(anomalies_detected) }}</strong><small>Above selected threshold</small></article>
+    <article class="metric-card"><span class="metric-label">DEVICE</span><strong class="metric-text">{{ device or '—' }}</strong><small>{{ threshold_description or 'Saved threshold' }}</small></article>
+  </div>
+  {% if metrics %}
+  <div class="metric-grid four results-metrics">
+    <article class="metric-card"><span class="metric-label">ACCURACY</span><strong>{{ '%.2f%%'|format(metrics.accuracy * 100) }}</strong></article>
+    <article class="metric-card"><span class="metric-label">PRECISION</span><strong>{{ '%.2f%%'|format(metrics.precision * 100) }}</strong></article>
+    <article class="metric-card"><span class="metric-label">RECALL</span><strong>{{ '%.2f%%'|format(metrics.recall * 100) }}</strong></article>
+    <article class="metric-card"><span class="metric-label">F1 SCORE</span><strong>{{ '%.4f'|format(metrics.f1) }}</strong></article>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if loss_chart or error_chart %}
+<section class="chart-grid">
+  {% if loss_chart %}<article class="panel chart-panel"><div class="panel-heading"><div><div class="eyebrow">OPTIMIZATION</div><h2>Training history</h2></div></div><div class="plot-wrap">{{ loss_chart|safe }}</div></article>{% endif %}
+  {% if error_chart %}<article class="panel chart-panel"><div class="panel-heading"><div><div class="eyebrow">THRESHOLD ANALYSIS</div><h2>Reconstruction error</h2></div></div><div class="plot-wrap">{{ error_chart|safe }}</div></article>{% endif %}
+</section>
+{% elif model_available %}
+<section class="panel saved-model-panel"><div class="empty-icon">✓</div><div><h2>Saved model loaded</h2><p class="muted">A previously trained model is available for single and batch scoring. Train again to show detailed charts from the current run.</p></div></section>
+{% else %}
+<section class="panel empty-state"><div class="empty-icon">◈</div><h2>No trained model yet</h2><p class="muted">Configure the training form, then run the detector. Its metrics and visualizations will appear here.</p></section>
+{% endif %}
+
+{% if metrics and metrics.confusion_matrix %}
+<section class="section-block">
+  <div class="section-heading"><div><div class="eyebrow">EVALUATION</div><h2>Confusion matrix</h2></div><span class="panel-index">ACTUAL VS PREDICTED</span></div>
+  <section class="panel table-panel confusion-panel"><div class="table-scroll"><table><thead><tr><th>Actual class</th><th>Predicted normal</th><th>Predicted anomaly</th></tr></thead><tbody><tr><th>Actual normal</th><td>{{ fmt_int(metrics.confusion_matrix[0][0]) }}</td><td>{{ fmt_int(metrics.confusion_matrix[0][1]) }}</td></tr><tr><th>Actual anomaly</th><td>{{ fmt_int(metrics.confusion_matrix[1][0]) }}</td><td>{{ fmt_int(metrics.confusion_matrix[1][1]) }}</td></tr></tbody></table></div></section>
+</section>
+{% endif %}
+
+{% if prediction_preview %}
+<section class="section-block">
+  <div class="section-heading"><div><div class="eyebrow">HELD-OUT SPLIT</div><h2>Highest-error test transactions</h2></div><span class="panel-index">TOP {{ prediction_preview|length }} ROWS</span></div>
+  <section class="panel table-panel"><div class="table-scroll"><table><thead><tr>{% for column in prediction_columns %}<th>{{ column }}</th>{% endfor %}</tr></thead><tbody>{% for row in prediction_preview %}<tr>{% for column in prediction_columns %}<td>{% if column == 'prediction' %}<span class="result-pill {% if row[column] == 'Anomaly' %}danger{% else %}normal{% endif %}">{{ row[column] }}</span>{% elif row[column] is none %}—{% elif row[column] is number %}{{ '%.6g'|format(row[column]) }}{% else %}{{ row[column] }}{% endif %}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div></section>
+</section>
+{% endif %}
+<div class="method-note"><strong>Method note</strong><span>This is a reconstruction-error detector, not a calibrated probability model. A threshold crossing is a review signal, not proof of fraud. When a binary label is present, the model is trained on class 0 only.</span></div>
+{% endblock %}

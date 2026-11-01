@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Single transaction · Autoencoder Anomaly Lab{% endblock %}
+{% block breadcrumb %}SINGLE TRANSACTION{% endblock %}
+{% block content %}
+<section class="page-heading"><div class="eyebrow">INFERENCE / ONE RECORD</div><h1>Single transaction</h1><p class="hero-copy">Enter feature values to calculate reconstruction error and compare it with the active model threshold.</p></section>
+{% if not bundle %}
+<section class="panel empty-state"><div class="empty-icon">◈</div><h2>Model required</h2><p class="muted">Train a model from the dashboard or place valid saved model artifacts in <code>artifacts/</code>.</p><a class="button button-primary" href="{{ url_for('dashboard') }}">Go to model dashboard <span>→</span></a></section>
+{% else %}
+<div class="main-grid inference-grid">
+  <section class="panel"><div class="panel-heading"><div><div class="eyebrow">MODEL INPUT</div><h2>Transaction features</h2></div><span class="panel-index">{{ feature_columns|length }} FEATURES</span></div>
+    <form method="post" class="stack-form">
+      <div class="feature-form-grid">
+      {% for column in feature_columns %}<div class="field"><label for="{{ column }}">{{ normalised_label(column) }}</label><input id="{{ column }}" name="{{ column }}" type="number" step="any" required value="{{ form_values.get(column, '') }}"></div>{% endfor %}
+      </div>
+      <p class="field-help">Fields start at the scaler's training mean as a neutral baseline. Replace these values with the transaction to inspect.</p>
+      <button class="button button-primary" type="submit">Analyze transaction <span>→</span></button>
+    </form>
+  </section>
+  <aside class="panel threshold-info"><div class="eyebrow">ACTIVE MODEL</div><h2>Decision boundary</h2><p class="muted">A transaction is flagged when its reconstruction error is greater than the trained threshold.</p><div class="large-number">{{ '%.6g'|format(bundle.threshold) }}</div><div class="metric-label">RECONSTRUCTION THRESHOLD</div><hr><dl class="detail-list"><div><dt>Threshold method</dt><dd>{{ bundle.threshold_description }}</dd></div><div><dt>Input features</dt><dd>{{ feature_columns|length }}</dd></div><div><dt>Model source</dt><dd>{% if bundle.model_loaded_from_disk %}Saved artifacts{% else %}Current session{% endif %}</dd></div></dl></aside>
+</div>
+{% if prediction %}
+<section class="panel prediction-panel {% if prediction.is_anomaly %}prediction-anomaly{% else %}prediction-normal{% endif %}">
+  <div class="prediction-icon">{% if prediction.is_anomaly %}!{% else %}✓{% endif %}</div><div class="prediction-copy"><div class="eyebrow">ANALYSIS COMPLETE</div><h2>{% if prediction.is_anomaly %}Potential anomaly detected{% else %}No anomaly flagged{% endif %}</h2><p class="muted">The model classified this row as <strong>{{ prediction.label }}</strong> based on reconstruction error.</p></div>
+  <div class="prediction-values"><div><span>RECONSTRUCTION ERROR</span><strong>{{ '%.8g'|format(prediction.error) }}</strong></div><div><span>MODEL THRESHOLD</span><strong>{{ '%.8g'|format(prediction.threshold) }}</strong></div></div>
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}

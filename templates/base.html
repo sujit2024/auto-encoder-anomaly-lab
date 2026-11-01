@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A local PyTorch autoencoder dashboard for anomaly detection.">
+  <title>{% block title %}Autoencoder Anomaly Lab{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="{{ url_for('dashboard') }}">
+        <span class="brand-mark">◈</span>
+        <span><strong>Anomaly Lab</strong><small>DEEP AUTOENCODER</small></span>
+      </a>
+      <div class="sidebar-caption">WORKSPACE</div>
+      <nav class="primary-nav" aria-label="Main navigation">
+        <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}"><span class="nav-icon">▦</span> Model dashboard</a>
+        <a class="nav-link {% if request.endpoint == 'single_transaction' %}active{% endif %}" href="{{ url_for('single_transaction') }}"><span class="nav-icon">⌁</span> Single transaction</a>
+        <a class="nav-link {% if request.endpoint == 'batch_scoring' %}active{% endif %}" href="{{ url_for('batch_scoring') }}"><span class="nav-icon">⇧</span> Batch scoring</a>
+        <a class="nav-link {% if request.endpoint == 'dataset_explorer' %}active{% endif %}" href="{{ url_for('dataset_explorer') }}"><span class="nav-icon">▤</span> Dataset explorer</a>
+      </nav>
+      <div class="sidebar-foot">
+        <span class="status-dot {% if model_status %}online{% endif %}"></span>
+        <div><strong>{% if model_status %}Model available{% else %}Model not trained{% endif %}</strong><small>{% if model_status %}Saved artifacts detected{% else %}Train a model to begin{% endif %}</small></div>
+      </div>
+    </aside>
+    <main class="main-area">
+      <header class="topbar">
+        <div class="breadcrumb">PROJECT <span>/</span> <strong>{% block breadcrumb %}OVERVIEW{% endblock %}</strong></div>
+        <div class="topbar-meta"><span class="local-tag"><span></span> LOCAL WORKSPACE</span><span class="topbar-divider"></span><span>PyTorch · Flask</span></div>
+      </header>
+      <section class="page-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}<div class="flash-stack">
+            {% for category, message in messages %}<div class="flash flash-{{ category }}" role="status">{{ message }}</div>{% endfor %}
+          </div>{% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+        <footer class="page-footer"><span>Autoencoder Anomaly Lab</span><span>Reconstruction-based anomaly detection · Local processing</span></footer>
+      </section>
+    </main>
+  </div>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
