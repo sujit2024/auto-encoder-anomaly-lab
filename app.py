@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import sys
 import uuid
 from pathlib import Path
@@ -38,7 +39,7 @@ from src.dashboard_pipeline import (  # noqa: E402
 
 app = Flask(__name__)
 app.config.update(
-    SECRET_KEY="local-anomaly-lab-change-this-before-deployment",
+    SECRET_KEY=os.environ.get("SECRET_KEY", "local-development-key"),
     MAX_CONTENT_LENGTH=300 * 1024 * 1024,  # Allow the included large CSV and reasonable uploads.
 )
 
